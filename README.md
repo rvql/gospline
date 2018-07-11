@@ -22,6 +22,7 @@ s.Range(0, 3, 0.25)
 
 ### Supported boundaries
 First derivation boundary: gospline.NewClampedCubicSpline
+
 Second derivation boundary: gospline.NewNaturalCubicSpline
 
 ## Installation
