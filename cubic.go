@@ -34,9 +34,25 @@ type segment struct {
 }
 
 // NewCubicSpline returns cubic spline with natural boundary
-// the values in x must be in [0.0, 1.0], and the whole array must be in ascending order
+// the whole array must be in ascending order
 func NewCubicSpline(x, y []float64) Spline {
-	return newSpline(x, y, CubicSecondDeriv, 0, 0)
+	return NewNaturalCubicSpline(x, y, 0, 0)
+}
+
+// NewNaturalCubicSpline returns cubic spline with natural boundary
+// the boundaries are:
+//     f0: f''(x[0])
+//     fn: f''(x[len(x)-1])
+func NewNaturalCubicSpline(x, y []float64, f0, fn float64) Spline {
+	return newSpline(x, y, CubicSecondDeriv, f0, fn)
+}
+
+// NewClampedCubicSpline returns cubic spline with natural boundary
+// the boundaries are:
+//     f0: f'(x[0])
+//     fn: f'(x[len(x)-1])
+func NewClampedCubicSpline(x, y []float64, f0, fn float64) Spline {
+	return newSpline(x, y, CubicFirstDeriv, f0, fn)
 }
 
 func (c *cubic) At(x float64) float64 {
@@ -44,13 +60,17 @@ func (c *cubic) At(x float64) float64 {
 		c.segs = make([]segment, c.n-1)
 	}
 	var seg int
-	for seg = 0; seg < c.n-1; seg++ {
-		if c.x[seg] <= x && x < c.x[seg+1] {
-			break
+	switch {
+	case x < c.x[0]:
+		seg = 0
+	case x >= c.x[c.n-2]:
+		seg = c.n - 2
+	default:
+		for seg = 0; seg < c.n-1; seg++ {
+			if c.x[seg] <= x && x < c.x[seg+1] {
+				break
+			}
 		}
-	}
-	if seg == c.n-1 {
-		seg--
 	}
 	s := &c.segs[seg]
 	// if not populated
@@ -63,17 +83,47 @@ func (c *cubic) At(x float64) float64 {
 		h := s.xr - s.xl
 		s.ar = c.m[seg] / 6 / h
 		s.al = c.m[seg+1] / 6 / h
-		s.br = (c.y[seg] - c.m[seg]*h*h/6) / 6 / c.m[seg]
-		s.bl = (c.y[seg+1] - c.m[seg+1]*h*h/6) / 6 / c.m[seg+1]
+		if s.ar == 0 {
+			s.br = (c.y[seg] - c.m[seg]*h*h/6) / h
+		} else {
+			s.br = (c.y[seg] - c.m[seg]*h*h/6) * 6 / c.m[seg]
+		}
+		if s.al == 0 {
+			s.bl = (c.y[seg+1] - c.m[seg+1]*h*h/6) / h
+		} else {
+			s.bl = (c.y[seg+1] - c.m[seg+1]*h*h/6) * 6 / c.m[seg+1]
+		}
 	}
 	dxr := s.xr - x
 	dxl := x - s.xl
+	var r float64
+	var l float64
+	if s.ar == 0 {
+		r = s.br * dxr
+	} else {
+		r = dxr * s.ar * (dxr*dxr + s.br)
+	}
+	if s.al == 0 {
+		l = s.bl * dxl
+	} else {
+		l = dxl * s.al * (dxl*dxl + s.bl)
+	}
 
-	return dxr*s.ar*(dxr*dxr+s.br) + dxl*s.al*(dxl*dxl+s.bl)
+	return r + l
 }
 
 func (c *cubic) Range(start, end, step float64) []float64 {
-	return make([]float64, 0)
+	if start > end {
+		panic("start must be smaller than end")
+	}
+	n := int((end-start)/step) + 1
+	v := make([]float64, n)
+	x := start
+	for i := 0; i < n; i++ {
+		v[i] = c.At(x)
+		x += step
+	}
+	return v
 }
 
 func newSpline(x, y []float64, b boundary, f0, fn float64) Spline {
@@ -111,7 +161,7 @@ func (c *cubic) calculateM() {
 		mu[i] = h[i] / (h[i] + h[i+1])
 		lambda[i] = 1 - mu[i]
 		diag[i] = 2
-		d[i] = 6 * (c.y[i-1]/h[i]/(h[i]+h[i+1]) - c.y[i]/h[i]/h[i+1] + c.y[i]/(h[i]+h[i+1])/h[i+1])
+		d[i] = 6 * (c.y[i-1]/h[i]/(h[i]+h[i+1]) - c.y[i]/h[i]/h[i+1] + c.y[i+1]/(h[i]+h[i+1])/h[i+1])
 	}
 	diag[0] = 2
 	diag[c.n-1] = 2
