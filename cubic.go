@@ -19,7 +19,18 @@ type cubic struct {
 	f0 float64
 	fn float64
 
-	m []float64
+	m    []float64
+	segs []segment
+}
+
+// Cx = ar(xr - x)((xr - x)^2 + br) + al(x - xl)((x - xl)^2 + bl)
+type segment struct {
+	xl float64
+	xr float64
+	al float64
+	bl float64
+	ar float64
+	br float64
 }
 
 // NewCubicSpline returns cubic spline with natural boundary
@@ -29,7 +40,36 @@ func NewCubicSpline(x, y []float64) Spline {
 }
 
 func (c *cubic) At(x float64) float64 {
-	return 0
+	if c.segs == nil {
+		c.segs = make([]segment, c.n-1)
+	}
+	var seg int
+	for seg = 0; seg < c.n-1; seg++ {
+		if c.x[seg] <= x && x < c.x[seg+1] {
+			break
+		}
+	}
+	if seg == c.n-1 {
+		seg--
+	}
+	s := &c.segs[seg]
+	// if not populated
+	if s.xr == 0 {
+		if c.m == nil {
+			c.calculateM()
+		}
+		s.xl = c.x[seg]
+		s.xr = c.x[seg+1]
+		h := s.xr - s.xl
+		s.ar = c.m[seg] / 6 / h
+		s.al = c.m[seg+1] / 6 / h
+		s.br = (c.y[seg] - c.m[seg]*h*h/6) / 6 / c.m[seg]
+		s.bl = (c.y[seg+1] - c.m[seg+1]*h*h/6) / 6 / c.m[seg+1]
+	}
+	dxr := s.xr - x
+	dxl := x - s.xl
+
+	return dxr*s.ar*(dxr*dxr+s.br) + dxl*s.al*(dxl*dxl+s.bl)
 }
 
 func (c *cubic) Range(start, end, step float64) []float64 {
@@ -42,9 +82,6 @@ func newSpline(x, y []float64, b boundary, f0, fn float64) Spline {
 	}
 	n := len(x)
 	for i := 0; i < n; i++ {
-		if x[i] < 0 || x[i] > 1 {
-			panic("values in x must be in [0.0, 1.0]")
-		}
 		if i < n-1 && x[i] >= x[i+1] {
 			panic("values in x must be in ascending order")
 		}
@@ -96,5 +133,5 @@ func (c *cubic) calculateM() {
 		panic("not yet implemented")
 	}
 
-	c.m = triThomas(mu[1:], diag, lambda[:c.n], d)
+	c.m = triThomas(mu[1:], diag, lambda[:c.n-1], d)
 }
