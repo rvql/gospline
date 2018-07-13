@@ -23,7 +23,7 @@ type cubic struct {
 	segs []segment
 }
 
-// Cx = ar(xr - x)((xr - x)^2 + br) + al(x - xl)((x - xl)^2 + bl)
+// Cx = (xr - x)(ar * (xr - x)^2 + br) + (x - xl)(al * (x - xl)^2 + bl)
 type segment struct {
 	xl float64
 	xr float64
@@ -83,33 +83,13 @@ func (c *cubic) At(x float64) float64 {
 		h := s.xr - s.xl
 		s.ar = c.m[seg] / 6 / h
 		s.al = c.m[seg+1] / 6 / h
-		if s.ar == 0 {
-			s.br = (c.y[seg] - c.m[seg]*h*h/6) / h
-		} else {
-			s.br = (c.y[seg] - c.m[seg]*h*h/6) * 6 / c.m[seg]
-		}
-		if s.al == 0 {
-			s.bl = (c.y[seg+1] - c.m[seg+1]*h*h/6) / h
-		} else {
-			s.bl = (c.y[seg+1] - c.m[seg+1]*h*h/6) * 6 / c.m[seg+1]
-		}
+		s.br = (c.y[seg] - c.m[seg]*h*h/6) / h
+		s.bl = (c.y[seg+1] - c.m[seg+1]*h*h/6) / h
 	}
 	dxr := s.xr - x
 	dxl := x - s.xl
-	var r float64
-	var l float64
-	if s.ar == 0 {
-		r = s.br * dxr
-	} else {
-		r = dxr * s.ar * (dxr*dxr + s.br)
-	}
-	if s.al == 0 {
-		l = s.bl * dxl
-	} else {
-		l = dxl * s.al * (dxl*dxl + s.bl)
-	}
 
-	return r + l
+	return dxr*(s.ar*dxr*dxr+s.br) + dxl*(s.al*dxl*dxl+s.bl)
 }
 
 func (c *cubic) Range(start, end, step float64) []float64 {
