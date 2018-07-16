@@ -20,11 +20,11 @@ type cubic struct {
 	fn float64
 
 	m    []float64
-	segs []segment
+	segs []cubicSegment
 }
 
 // Cx = (xr - x)(ar * (xr - x)^2 + br) + (x - xl)(al * (x - xl)^2 + bl)
-type segment struct {
+type cubicSegment struct {
 	xl float64
 	xr float64
 	al float64
@@ -57,7 +57,7 @@ func NewClampedCubicSpline(x, y []float64, f0, fn float64) Spline {
 
 func (c *cubic) At(x float64) float64 {
 	if c.segs == nil {
-		c.segs = make([]segment, c.n-1)
+		c.segs = make([]cubicSegment, c.n-1)
 	}
 	var seg int
 	switch {
@@ -116,15 +116,18 @@ func newSpline(x, y []float64, b boundary, f0, fn float64) Spline {
 			panic("values in x must be in ascending order")
 		}
 	}
-	c := cubic{
-		x:        x,
-		y:        y,
+	xx := make([]float64, n)
+	copy(xx, x)
+	yy := make([]float64, n)
+	copy(yy, y)
+	return &cubic{
+		x:        xx,
+		y:        yy,
 		n:        n,
 		boundary: b,
 		f0:       f0,
 		fn:       fn,
 	}
-	return &c
 }
 
 func (c *cubic) calculateM() {
