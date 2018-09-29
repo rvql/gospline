@@ -1,7 +1,6 @@
 package gospline
 
 import (
-	"fmt"
 	"math"
 )
 
@@ -11,16 +10,15 @@ type hermite struct {
 	m []float64
 	n int
 
-	segs []hermiteSegment
+	segs []*hermiteSegment
 }
 
 // p(x) = a(x - xk)^3 + b(x - xk)^2 + c(x - xk) + d
 type hermiteSegment struct {
-	ready bool
-	a     float64
-	b     float64
-	c     float64
-	d     float64
+	a float64
+	b float64
+	c float64
+	d float64
 }
 
 // NewMonotoneSpline returns cubic monotone hermite spline
@@ -78,8 +76,11 @@ func NewMonotoneSpline(x, y []float64) Spline {
 }
 
 func (hm *hermite) At(x float64) float64 {
-	if x < hm.x[0] || x > hm.x[hm.n-1] {
-		panic(fmt.Sprintf("x %g should be between %g and %g", x, hm.x[0], hm.x[hm.n-1]))
+	if x <= hm.x[0] {
+		return hm.p[0]
+	}
+	if x >= hm.x[hm.n-1] {
+		return hm.p[hm.n-1]
 	}
 
 	var seg int
@@ -94,17 +95,19 @@ func (hm *hermite) At(x float64) float64 {
 	}
 
 	if hm.segs == nil {
-		hm.segs = make([]hermiteSegment, hm.n-1)
+		hm.segs = make([]*hermiteSegment, hm.n-1)
 	}
 
-	s := &hm.segs[seg]
-	if !s.ready {
+	s := hm.segs[seg]
+	if s == nil {
 		h := hm.x[seg+1] - hm.x[seg]
-		s.a = ((2*hm.p[seg]-2*hm.p[seg+1])/h + hm.m[seg] + hm.m[seg+1]) / h / h
-		s.b = ((-3*hm.p[seg]+3*hm.p[seg+1])/h - 2*hm.m[seg] - hm.m[seg+1]) / h
-		s.c = hm.m[seg]
-		s.d = hm.p[seg] / h
-		s.ready = true
+		s = &hermiteSegment{
+			a: ((2*hm.p[seg]-2*hm.p[seg+1])/h + hm.m[seg] + hm.m[seg+1]) / h / h,
+			b: ((-3*hm.p[seg]+3*hm.p[seg+1])/h - 2*hm.m[seg] - hm.m[seg+1]) / h,
+			c: hm.m[seg],
+			d: hm.p[seg],
+		}
+		hm.segs[seg] = s
 	}
 
 	dx := x - hm.x[seg]
@@ -130,7 +133,6 @@ func newHermite(x, p, m []float64) Spline {
 	if len(x) != len(p) || len(p) != len(m) {
 		panic("array length mismatch")
 	}
-	fmt.Println(x, p, m)
 	n := len(x)
 	for i := 0; i < n; i++ {
 		if i < n-1 && x[i] >= x[i+1] {
