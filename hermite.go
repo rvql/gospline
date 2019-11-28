@@ -87,7 +87,8 @@ func (hm *hermite) At(x float64) float64 {
 	if x == hm.x[hm.n-1] {
 		seg = hm.n - 1
 	} else {
-		for seg = 0; seg < hm.n-1; seg++ {
+		// TODO use binary search!  If we're repeating twice, ...
+		for seg = 0; seg < hm.n-2; seg++ {
 			if hm.x[seg] <= x && x < hm.x[seg+1] {
 				break
 			}
@@ -95,7 +96,7 @@ func (hm *hermite) At(x float64) float64 {
 	}
 
 	if hm.segs == nil {
-		hm.segs = make([]*hermiteSegment, hm.n-1)
+		hm.segs = make([]*hermiteSegment, hm.n) // @@@!
 	}
 
 	s := hm.segs[seg]
