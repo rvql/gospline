@@ -1,5 +1,7 @@
 package gospline
 
+// See https://en.wikipedia.org/wiki/Monotone_cubic_interpolation
+
 import (
 	"math"
 	"sort"
@@ -35,11 +37,13 @@ func NewMonotoneSpline(x, y []float64) Spline {
 		}
 	}
 
+	// 1. Compute the slopes of the secant lines between successive points.
 	dk := make([]float64, n-1)
 	for i := 0; i < n-1; i++ {
 		dk[i] = (y[i+1] - y[i]) / (x[i+1] - x[i])
 	}
 
+	// 2. Initialize interior tangents as the average of the secants.
 	m := make([]float64, n)
 	for i := 1; i < n-1; i++ {
 		if dk[i-1] < 0 && dk[i] > 0 || dk[i-1] > 0 && dk[i] < 0 {
@@ -52,12 +56,14 @@ func NewMonotoneSpline(x, y []float64) Spline {
 	m[n-1] = dk[n-2]
 
 	for i := 0; i < n-1; i++ {
-		// TODO: maybe fix this equality test of float64
+		// 3. If dk[i] == 0, spline connecting these points
+		// must be flat to preserve monotonicity.
 		if y[i] == y[i+1] {
 			m[i] = 0
 			m[i+1] = 0
 			continue
 		}
+		// 4. Check for strict monotonicity.
 		alpha := m[i] / dk[i]
 		if i >= 1 {
 			prevBeta := m[i] / dk[i-1]
@@ -66,6 +72,7 @@ func NewMonotoneSpline(x, y []float64) Spline {
 			}
 		}
 		beta := m[i+1] / dk[i]
+		// 5. Prevent overshoot.
 		if alpha*alpha+beta*beta > 9 {
 			tao := 3 / math.Hypot(alpha, beta)
 			m[i] = tao * alpha * dk[i]
@@ -87,9 +94,10 @@ func (hm *hermite) At(x float64) float64 {
 	seg := sort.Search(hm.n, func(i int) bool {
 		return x < hm.x[i]
 	})
+	seg--
 
 	if hm.segs == nil {
-		hm.segs = make([]*hermiteSegment, hm.n) // @@@!
+		hm.segs = make([]*hermiteSegment, hm.n)
 	}
 
 	s := hm.segs[seg]
