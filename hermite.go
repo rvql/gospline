@@ -91,13 +91,16 @@ func (hm *hermite) At(x float64) float64 {
 		return hm.p[hm.n-1]
 	}
 
+	// Find the greatest numbered segment with hm.x > x, then
+	// choose the one before it.  If x is one of the input points,
+	// this selects the segment such that hm.x[seg] == x.
 	seg := sort.Search(hm.n, func(i int) bool {
 		return x < hm.x[i]
 	})
 	seg--
 
 	if hm.segs == nil {
-		hm.segs = make([]*hermiteSegment, hm.n)
+		hm.segs = make([]*hermiteSegment, hm.n-1)
 	}
 
 	s := hm.segs[seg]
