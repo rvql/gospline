@@ -2,6 +2,7 @@ package gospline
 
 import (
 	"math"
+	"sort"
 )
 
 type hermite struct {
@@ -83,17 +84,9 @@ func (hm *hermite) At(x float64) float64 {
 		return hm.p[hm.n-1]
 	}
 
-	var seg int
-	if x == hm.x[hm.n-1] {
-		seg = hm.n - 1
-	} else {
-		// TODO use binary search!  If we're repeating twice, ...
-		for seg = 0; seg < hm.n-2; seg++ {
-			if hm.x[seg] <= x && x < hm.x[seg+1] {
-				break
-			}
-		}
-	}
+	seg := sort.Search(hm.n, func(i int) bool {
+		return x < hm.x[i]
+	})
 
 	if hm.segs == nil {
 		hm.segs = make([]*hermiteSegment, hm.n) // @@@!
