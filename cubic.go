@@ -1,5 +1,7 @@
 package gospline
 
+import "sort"
+
 type boundary uint
 
 // bounday types
@@ -20,7 +22,7 @@ type cubic struct {
 	fn float64
 
 	m    []float64
-	segs []cubicSegment
+	segs []*cubicSegment
 }
 
 // Cx = (xr - x)(ar * (xr - x)^2 + br) + (x - xl)(al * (x - xl)^2 + bl)
@@ -56,35 +58,38 @@ func NewClampedCubicSpline(x, y []float64, f0, fn float64) Spline {
 }
 
 func (c *cubic) At(x float64) float64 {
+	nSegs := c.n - 1
 	if c.segs == nil {
-		c.segs = make([]cubicSegment, c.n-1)
+		c.segs = make([]*cubicSegment, nSegs)
 	}
-	var seg int
-	switch {
-	case x < c.x[0]:
+	// Find the greatest numbered segment with hm.x > x, then
+	// choose the one before it.  If x is one of the input points,
+	// this selects the segment such that hm.x[seg] == x.
+	seg := sort.SearchFloat64s(c.x, x)
+	if c.x[seg] != x {
+		seg--
+	}
+	if seg < 0 {
 		seg = 0
-	case x >= c.x[c.n-2]:
-		seg = c.n - 2
-	default:
-		for seg = 0; seg < c.n-1; seg++ {
-			if c.x[seg] <= x && x < c.x[seg+1] {
-				break
-			}
-		}
+	} else if seg > nSegs-1 {
+		seg = nSegs - 1
 	}
-	s := &c.segs[seg]
+	s := c.segs[seg]
 	// if not populated
-	if s.xr == 0 {
+	if s == nil {
 		if c.m == nil {
 			c.calculateM()
 		}
-		s.xl = c.x[seg]
-		s.xr = c.x[seg+1]
-		h := s.xr - s.xl
-		s.ar = c.m[seg] / 6 / h
-		s.al = c.m[seg+1] / 6 / h
-		s.br = (c.y[seg] - c.m[seg]*h*h/6) / h
-		s.bl = (c.y[seg+1] - c.m[seg+1]*h*h/6) / h
+		h := c.x[seg+1] - c.x[seg]
+		s = &cubicSegment{
+			xl: c.x[seg],
+			xr: c.x[seg+1],
+			ar: c.m[seg] / 6 / h,
+			al: c.m[seg+1] / 6 / h,
+			br: (c.y[seg] - c.m[seg]*h*h/6) / h,
+			bl: (c.y[seg+1] - c.m[seg+1]*h*h/6) / h,
+		}
+		c.segs[seg] = s
 	}
 	dxr := s.xr - x
 	dxl := x - s.xl
@@ -111,10 +116,8 @@ func newSpline(x, y []float64, b boundary, f0, fn float64) Spline {
 		panic("array length mismatch")
 	}
 	n := len(x)
-	for i := 0; i < n; i++ {
-		if i < n-1 && x[i] >= x[i+1] {
-			panic("values in x must be in ascending order")
-		}
+	if !sort.Float64sAreSorted(x) {
+		panic("values in x must be in ascending order")
 	}
 	xx := make([]float64, n)
 	copy(xx, x)

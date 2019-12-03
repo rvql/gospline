@@ -11,8 +11,7 @@ func TestHermiteSpline(t *testing.T) {
 
 	// Test the input points are mapped exactly.
 	for i := range x {
-		at := s.At(x[i])
-		if at != y[i] {
+		if at := s.At(x[i]); !floatEquals(at, y[i]) {
 			t.Errorf("interpolate incorrect at %f: %f != %f", x[i], at, y[i])
 		}
 	}
@@ -20,7 +19,7 @@ func TestHermiteSpline(t *testing.T) {
 	const intermediate = 10000
 
 	// Test that intermediate points are monotonic.
-	for i := range x[0 : len(x)-1] {
+	for i := range x[:len(x)-1] {
 		diff := y[i+1] - y[i]
 		ypos := y[i]
 		for j := 0; j < intermediate; j++ {

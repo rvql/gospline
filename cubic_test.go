@@ -1,17 +1,15 @@
 package gospline
 
 import (
-	"math"
 	"testing"
 )
 
 func TestSimpleCubicSpline(t *testing.T) {
-	const epsilon = 1e-9
 	x := [...]float64{0, 1, 2, 3}
 	y := [...]float64{0, 0.5, 2, 1.5}
 	s := newSpline(x[:], y[:], CubicSecondDeriv, 0, 0)
 	for i := range x {
-		if math.Abs(s.At(x[i])-y[i]) > epsilon {
+		if !floatEquals(s.At(x[i]), y[i]) {
 			t.Errorf("expected f(%g) = %g, but the result is %g", x[i], y[i], s.At(x[i]))
 		}
 	}
