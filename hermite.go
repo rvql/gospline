@@ -31,10 +31,8 @@ func NewMonotoneSpline(x, y []float64) Spline {
 		panic("array length mismatch")
 	}
 	n := len(x)
-	for i := 0; i < n; i++ {
-		if i < n-1 && x[i] >= x[i+1] {
-			panic("values in x must be in ascending order")
-		}
+	if !sort.Float64sAreSorted(x) {
+		panic("values in x must be in ascending order")
 	}
 
 	// 1. Compute the slopes of the secant lines between successive points.
@@ -94,10 +92,10 @@ func (hm *hermite) At(x float64) float64 {
 	// Find the greatest numbered segment with hm.x > x, then
 	// choose the one before it.  If x is one of the input points,
 	// this selects the segment such that hm.x[seg] == x.
-	seg := sort.Search(hm.n, func(i int) bool {
-		return x < hm.x[i]
-	})
-	seg--
+	seg := sort.SearchFloat64s(hm.x, x)
+	if hm.x[seg] != x {
+		seg--
+	}
 
 	if hm.segs == nil {
 		hm.segs = make([]*hermiteSegment, hm.n-1)
@@ -139,11 +137,6 @@ func newHermite(x, p, m []float64) Spline {
 		panic("array length mismatch")
 	}
 	n := len(x)
-	for i := 0; i < n; i++ {
-		if i < n-1 && x[i] >= x[i+1] {
-			panic("values in x must be in ascending order")
-		}
-	}
 	xx := make([]float64, n)
 	copy(xx, x)
 	pp := make([]float64, n)

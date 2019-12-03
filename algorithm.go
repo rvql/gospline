@@ -15,10 +15,9 @@ func triThomas(a, b, c, d []float64) []float64 {
 		return d
 	}
 
-	var div float64
 	c[0] /= b[0]
 	for i := 1; i < n-1; i++ {
-		div = b[i] - a[i-1]*c[i-1]
+		div := b[i] - a[i-1]*c[i-1]
 		c[i] /= div
 		d[i] = (d[i] - a[i-1]*d[i-1]) / div
 	}
