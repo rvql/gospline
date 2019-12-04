@@ -62,18 +62,7 @@ func (c *cubic) At(x float64) float64 {
 	if c.segs == nil {
 		c.segs = make([]*cubicSegment, nSegs)
 	}
-	// Find the greatest numbered segment with hm.x > x, then
-	// choose the one before it.  If x is one of the input points,
-	// this selects the segment such that hm.x[seg] == x.
-	seg := sort.SearchFloat64s(c.x, x)
-	if c.x[seg] != x {
-		seg--
-	}
-	if seg < 0 {
-		seg = 0
-	} else if seg > nSegs-1 {
-		seg = nSegs - 1
-	}
+	seg := findSegment(c.x, x)
 	s := c.segs[seg]
 	// if not populated
 	if s == nil {

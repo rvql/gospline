@@ -22,3 +22,59 @@ func TestSolveTridiagonal(t *testing.T) {
 		t.Error("x[4] should be 5")
 	}
 }
+
+func TestFindSegment(t *testing.T) {
+	testcases := []struct {
+		xs     []float64
+		x      float64
+		result int
+	}{
+		// in segment
+		{
+			xs:     []float64{1, 2, 3, 4, 5},
+			x:      4.5,
+			result: 3,
+		},
+		// on endpoint
+		{
+			xs:     []float64{1, 2, 3, 4, 5},
+			x:      3,
+			result: 2,
+		},
+		// negative endpoints
+		{
+			xs:     []float64{-1.2, -1.0, 0.6, 1.3, 100},
+			x:      0,
+			result: 1,
+		},
+		// below any
+		{
+			xs:     []float64{-1.2, -1.0, 0.6, 1.3, 100},
+			x:      -100,
+			result: 0,
+		},
+		// above any
+		{
+			xs:     []float64{-1.2, -1.0, 0.6, 1.3, 100},
+			x:      101,
+			result: 3,
+		},
+		// left endpoint
+		{
+			xs:     []float64{-1.2, -1.0, 0.6, 1.3, 100},
+			x:      -1.2,
+			result: 0,
+		},
+		// right endpoint
+		{
+			xs:     []float64{-1.2, -1.0, 0.6, 1.3, 100},
+			x:      100,
+			result: 3,
+		},
+	}
+	for _, tc := range testcases {
+		if result := findSegment(tc.xs, tc.x); result != tc.result {
+			t.Errorf("testcase %v failed, expected %d, result %d", tc, tc.result, result)
+		}
+	}
+}

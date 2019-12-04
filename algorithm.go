@@ -1,5 +1,9 @@
 package gospline
 
+import (
+	"sort"
+)
+
 // solves diagonal matrix using Thomas algorithm
 // https://en.wikipedia.org/wiki/Tridiagonal_matrix_algorithm
 // will change input slices
@@ -26,4 +30,28 @@ func triThomas(a, b, c, d []float64) []float64 {
 		d[i] -= c[i] * d[i+1]
 	}
 	return d
+}
+
+// Find the segments between the elements in xs in which x resides
+// The numbers in xs *must* be in ascending order
+// The segments are left inclusive and right exclusive
+//
+// For example:
+//
+// findSegment([1, 2, 3, 4, 5], 3) = 2
+// since x = 3 is in [3, 4), which is the third segment
+//
+// findSegment([1, 2, 3, 4, 5], 4.5) = 3
+// since x = 4.5 is in [4, 5), which is the fourth segment
+//
+// If x is not in any of the segments, return the closest one
+func findSegment(xs []float64, x float64) int {
+	// assert xs in ascending order
+	if x <= xs[0] {
+		return 0
+	}
+	if l := len(xs); x >= xs[l-1] {
+		return l - 2
+	}
+	return sort.Search(len(xs), func(i int) bool { return xs[i] > x }) - 1
 }
